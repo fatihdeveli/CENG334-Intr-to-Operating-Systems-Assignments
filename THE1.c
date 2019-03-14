@@ -16,29 +16,28 @@ int main(int argc, char *argv[]) {
         child = -1; // Child number, parent is -1.
 
         pid_t parentPid = getpid();
-/*
+
         for (int i = 0; i < N; i++) { // Create the pipes
             if (pipe(pipes[i]) < 0) {
                 printf("Pipe error");
                 return -1;
             }
-        }*/
+        }
+
         for (int i = 0; i < N; i++) {
-            printf("Child creator: %d\n", i);
+            printf("Child %d is being created.\n", i);
             if (fork()){
-                close(pipes[i][0]); // Close read pipes of parent
+                printf("i: %d, Closing read pipe of parent: %d\n", i, close(pipes[i][0])); // Close read pipes of parent
                 sleep(1);
             }
             else {
                 child = i; // Assign child number
-                // Close the write pipe of the child
-                close(pipes[i][1]);
-                for (int j = 0; j < i; j++){ // close pipes of other children
-                    printf("others close: %d %d\n", close(pipes[j][0]), close(pipes[j][1]));
-                }
-
                 printf("I am child %d, my pid is %d\n", child, getpid());
-
+                // Close the write pipe of the child
+                printf("child %d, closing own write pipe: %d\n", child, close(pipes[i][1]));
+                for (int j = 0; j < i; j++){ // close pipes of other children
+                    printf("child %d closing other pipes: %d %d\n", child, close(pipes[j][0]), close(pipes[j][1]));
+                }
                 break;
             }
         }
@@ -87,6 +86,6 @@ int main(int argc, char *argv[]) {
     }
 
 
-    printf("I am terminating: %d\n", child);
+    printf("Child %d is terminating.\n", child);
     return 0;
 }
