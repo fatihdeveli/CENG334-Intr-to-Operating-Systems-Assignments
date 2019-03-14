@@ -16,13 +16,13 @@ int main(int argc, char *argv[]) {
         child = -1; // Child number, parent is -1.
 
         pid_t parentPid = getpid();
-
+/*
         for (int i = 0; i < N; i++) { // Create the pipes
             if (pipe(pipes[i]) < 0) {
                 printf("Pipe error");
                 return -1;
             }
-        }
+        }*/
         for (int i = 0; i < N; i++) {
             printf("Child creator: %d\n", i);
             if (fork()){
@@ -33,6 +33,9 @@ int main(int argc, char *argv[]) {
                 child = i; // Assign child number
                 // Close the write pipe of the child
                 close(pipes[i][1]);
+                for (int j = 0; j < i; j++){ // close pipes of other children
+                    printf("others close: %d %d\n", close(pipes[j][0]), close(pipes[j][1]));
+                }
 
                 printf("I am child %d, my pid is %d\n", child, getpid());
 
@@ -46,6 +49,8 @@ int main(int argc, char *argv[]) {
             while(read(pipes[child][0], line, 512) > 0) {
                 printf("Child %d got line %s", child, line);
             }
+            printf("child close: %d\n", close(pipes[child][0]));
+            printf("child %d closed pipes.\n", child);
         }
         else { // Parent
             char *line = NULL;
@@ -57,10 +62,10 @@ int main(int argc, char *argv[]) {
             }
             free(line);
             for (int i = 0; i < N; i++) {
-                close(pipes[i][0]);
-                close(pipes[i][1]);
+                printf("%d\n", close(pipes[i][1]));
             }
             printf("closed pipes.\n");
+            sleep(2);
 
             /*
             pid_t pid[N];
