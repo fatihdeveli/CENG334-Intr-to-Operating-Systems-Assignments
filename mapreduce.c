@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         }
     }
     else {
-        printf("Invalid number of arguments");
+        printf("Invalid number of arguments.\n");
     }
     return 0;
 }
