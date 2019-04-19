@@ -1,8 +1,10 @@
-# CENG334-THE1
-Introduction to Operating Systems - Take Home Exam 1 solution  
-This repository contains implementations of the following on a simple MapReduce model.
+# CENG334 - Introduction to Operating Systems Assignments
+Solutions to the assignments of the course CENG334 - Introduction to Operating Systems
+## Assignment 1
+Implementations of the following on a simple MapReduce model:
 - Forking and managing child processes
 - Interprocess communication using pipes
 - Duplicating file descriptors
 - Reading from and writing to file descriptors
+## Assignment 2
 
