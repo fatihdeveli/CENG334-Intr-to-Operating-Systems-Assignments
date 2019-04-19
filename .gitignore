@@ -133,9 +133,12 @@ fabric.properties
 ###
 .idea/
 CMakeLists.txt
+vscode/
 
 ## THE1
 the1.tar.gz
+#Executable
+mapreduce
 
 ## THE2
 source.zip

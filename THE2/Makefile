@@ -1,5 +1,5 @@
 all:
-	g++ simulator.cpp writeOutput.c writeOutput.h -o simulator
+	g++ simulator.cpp writeOutput.c writeOutput.h -o simulator -lpthread
 	./simulator
 run:
 	./simulator
