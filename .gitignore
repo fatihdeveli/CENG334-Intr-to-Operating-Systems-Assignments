@@ -133,5 +133,12 @@ fabric.properties
 ###
 .idea/
 CMakeLists.txt
+
+## THE1
 the1.tar.gz
+
+## THE2
+source.zip
+#Executable
+simulator 
 
