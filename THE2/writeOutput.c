@@ -143,7 +143,7 @@ void WriteOutput(MinerInfo* minerInfo, TransporterInfo* transporterInfo, Smelter
             break;
         case FOUNDRY_STARTED:
             printf("Foundry started producing steel ingot. Waiting Ore coal: (%d/%d), iron: (%d/%d).\n", foundryInfo->waiting_coal, foundryInfo->loading_capacity,
-                    foundryInfo->waiting_iron, foundryInfo->loading_capacity);
+                   foundryInfo->waiting_iron, foundryInfo->loading_capacity);
             break;
         case FOUNDRY_FINISHED:
             printf("Foundry finished producing steel ingot. %d steel ingots are produced.\n", foundryInfo->total_produce);
