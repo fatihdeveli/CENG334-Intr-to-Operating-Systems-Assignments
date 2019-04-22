@@ -35,9 +35,6 @@ private:
     sem_t producedOres; // Semaphore for the produced ores
     bool isActive;
 
-
-
-
 };
 
 

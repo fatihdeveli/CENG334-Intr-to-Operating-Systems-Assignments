@@ -94,8 +94,6 @@ int main() {
         pthread_create(&tid, nullptr, Foundry::foundry, foundry);
     }
 
-
-    printf("Main thread is waiting for others to exit.\n");
     // Wait for threads to exit
 
     for (int i = 0; i < Nm; i++) {
