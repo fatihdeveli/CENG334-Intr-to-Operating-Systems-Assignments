@@ -16,8 +16,6 @@ private:
     pthread_t threadId;
     bool isActive;
 
-
-
     sem_t storageSlots; // Semaphore that is signaled by smelter when there is an available
     // slot in the storage for incoming ores. Transporters call wait to put ores in the storage.
 

@@ -9,8 +9,6 @@
 #include "Foundry.h"
 
 
-
-
 OreType intToOre(unsigned int i);
 
 int main() {
@@ -38,7 +36,7 @@ int main() {
 
     }
 
-    /// Create transporter threads
+    //// Create transporter threads
     int Nt; // Number of transporters
     std::cin >> Nt;
 
@@ -56,7 +54,7 @@ int main() {
         pthread_create(&tid, nullptr, Transporter::transporter, transporter);
     }
 
-    /// Create smelter threads
+    //// Create smelter threads
     int Ns; // Number of smelters
     std::cin >> Ns;
     std::vector<Smelter*> smelters;
@@ -75,7 +73,7 @@ int main() {
         pthread_create(&tid, nullptr, Smelter::smelter, smelter);
     }
 
-    /// Create foundry threads
+    //// Create foundry threads
     int Nf; // Number of foundries
     std::cin >> Nf;
 
@@ -94,8 +92,14 @@ int main() {
         pthread_create(&tid, nullptr, Foundry::foundry, foundry);
     }
 
-    // Wait for threads to exit
+    sleep(2);
+    foundries[0]->dropOre(IRON);
+    foundries[0]->dropOre(COAL);
+    sleep(2);
+    foundries[1]->dropOre(IRON);
+    foundries[1]->dropOre(COAL);
 
+    //// Wait for threads to exit
     for (int i = 0; i < Nm; i++) {
         pthread_join(miners[i]->getThreadId(), nullptr);
         delete miners[i];
