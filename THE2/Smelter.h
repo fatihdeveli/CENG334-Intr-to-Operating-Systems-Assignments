@@ -13,6 +13,12 @@ class Smelter {
 private:
     unsigned int id, interval, capacity, producedIngotCount, waitingOreCount;
     OreType oreType;
+public:
+    unsigned int getWaitingOreCount() const;
+
+    OreType getOreType() const;
+
+private:
     pthread_t threadId;
     bool isActive;
 

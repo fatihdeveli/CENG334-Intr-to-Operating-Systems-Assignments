@@ -14,12 +14,15 @@ Foundry::Foundry(unsigned int id, unsigned int interval, unsigned int capacity) 
     producedIngotCount(0),
     waitingIronCount(0),
     waitingCoalCount(0),
+    isActive(false),
     ironAndCoalCountMutex(PTHREAD_MUTEX_INITIALIZER){
 
     pthread_cond_init(&ironAndCoalReadyCV, nullptr);
 
     sem_init(&ironStorageSlots, 0, capacity);
     sem_init(&coalStorageSlots, 0, capacity);
+
+    pthread_create(&threadId, nullptr, foundry, this);
 
 }
 

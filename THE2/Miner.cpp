@@ -6,21 +6,26 @@
 #include <zconf.h>
 #include "Miner.h"
 
+extern sem_t producedOres;
+
 Miner::Miner(unsigned int id, unsigned int interval, unsigned int capacity,
         OreType oreType, unsigned int totalOre) :
-        id(id), interval(interval),
+        id(id),
+        interval(interval),
         capacity(capacity),
         oreType(oreType),
         totalOre(totalOre),
+        threadId(-1),
         currentOreCount(0),
+        reservedOreCount(0),
         oreCountMutex(PTHREAD_MUTEX_INITIALIZER) {
+
     sem_init(&storageSlots, 0, capacity);
-    sem_init(&producedOres, 0, 0);
-    threadId = -1;
-    isActive = false;
+    active = false;
+    //
+    pthread_create(&threadId, nullptr, miner, this);
+
 }
-
-
 
 
 pthread_t Miner::getThreadId() {
@@ -30,7 +35,7 @@ pthread_t Miner::getThreadId() {
 void *Miner::miner(void *arg) {
     auto* miner = (Miner*) arg;
     miner->threadId = pthread_self();
-    miner->isActive = true;
+    miner->active = true;
 
     // Notification: Miner created
     MinerInfo minerInfo = {miner->id, miner->oreType, miner->capacity, miner->currentOreCount};
@@ -46,13 +51,11 @@ void *Miner::miner(void *arg) {
         // Sleep a value in range of Interval +- (Interval*0.01) microseconds for production.
         usleep(miner->interval - (miner->interval*0.01) + (rand()%(int)(miner->interval*0.02)));
 
-        // Produced an ore, increment currentOreCount.
+        // Produced an ore, increment currentOreCount, inform available transporters
         pthread_mutex_lock(&miner->oreCountMutex);
         miner->currentOreCount += 1;
         pthread_mutex_unlock(&miner->oreCountMutex);
-
-        // Produced an ore, inform available transporters
-        sem_post(&miner->producedOres);
+        sem_post(&producedOres);
 
         // Notification: Miner finished
         minerInfo.current_count = miner->currentOreCount; // Update miner info
@@ -65,7 +68,7 @@ void *Miner::miner(void *arg) {
     } // Quit upon producing totalOre amount of ores.
 
     // Miner stopped
-    miner->isActive = false;
+    miner->active = false;
 
     // Notification: Miner stopped
     WriteOutput(&minerInfo, nullptr, nullptr, nullptr, MINER_STOPPED);
@@ -74,5 +77,48 @@ void *Miner::miner(void *arg) {
 
 Miner::~Miner() {
     sem_destroy(&storageSlots);
-    sem_destroy(&producedOres);
+}
+
+bool Miner::isActive() const {
+    return active;
+}
+
+unsigned int Miner::getCurrentOreCount() const {
+    return currentOreCount;
+}
+
+void Miner::pickUpOre() {
+    pthread_mutex_lock(&oreCountMutex);
+    currentOreCount--;
+    reservedOreCount--;
+    pthread_mutex_unlock(&oreCountMutex);
+}
+
+void Miner::signalStorageSpace() {
+    sem_post(&storageSlots);
+}
+
+void Miner::writeMinerOutput(Action action) {
+    MinerInfo minerInfo = {id, oreType, capacity, currentOreCount};
+    WriteOutput(&minerInfo, nullptr, nullptr, nullptr, action);
+}
+
+void Miner::reserveOre() {
+    reservedOreCount++;
+}
+
+OreType Miner::getOreType() const {
+    return oreType;
+}
+
+unsigned int Miner::getId() const {
+    return id;
+}
+
+unsigned int Miner::getCapacity() const {
+    return capacity;
+}
+
+unsigned int Miner::getReservedOreCount() const {
+    return reservedOreCount;
 }

@@ -23,6 +23,8 @@ Smelter::Smelter(unsigned int id, unsigned int interval, unsigned int capacity, 
 
     pthread_cond_init(&twoOresReadyCV, nullptr);
     sem_init(&storageSlots, 0, capacity);
+
+    pthread_create(&threadId, nullptr, smelter, this);
 }
 
 void *Smelter::smelter(void *args) {
@@ -111,4 +113,12 @@ void Smelter::dropOre() {
         pthread_cond_signal(&twoOresReadyCV);
     }
     pthread_mutex_unlock(&waitingOreCountMutex);
+}
+
+unsigned int Smelter::getWaitingOreCount() const {
+    return waitingOreCount;
+}
+
+OreType Smelter::getOreType() const {
+    return oreType;
 }

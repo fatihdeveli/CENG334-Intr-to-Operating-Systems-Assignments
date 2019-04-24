@@ -21,6 +21,18 @@ public:
     pthread_t getThreadId();
     static void *miner(void *arg);
 
+    /* Called by transporters to pick up an ore if any available. Returns true if pickup
+     * is successful, false otherwise. Synchronization issues are handled inside the function. */
+    void pickUpOre();
+    void signalStorageSpace();
+    unsigned int getCurrentOreCount() const;
+    bool isActive() const;
+    unsigned int getId() const;
+    unsigned int getCapacity() const;
+    OreType getOreType() const;
+
+    pthread_mutex_t oreCountMutex; // Mutex for the ore count
+    void reserveOre();
 
 private:
     unsigned int id;
@@ -30,11 +42,15 @@ private:
     unsigned int currentOreCount;
     pthread_t threadId;
     OreType oreType;
+    bool active;
     sem_t storageSlots; // Semaphore for the empty slots in the storage
-    pthread_mutex_t oreCountMutex; // Mutex for the ore count
-    sem_t producedOres; // Semaphore for the produced ores
-    bool isActive;
+    unsigned int reservedOreCount;
+public:
+    unsigned int getReservedOreCount() const;
 
+private:
+
+    void writeMinerOutput(Action action);
 };
 
 
