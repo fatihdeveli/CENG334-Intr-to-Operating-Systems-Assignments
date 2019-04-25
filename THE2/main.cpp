@@ -114,14 +114,14 @@ int main() {
         sem_post(&producerSpacesForCoal);
         sem_post(&producerSpacesForIron);
     }
-
+/*
     sleep(2);
     smelters[0]->dropOre();
     smelters[0]->dropOre();
     sleep(2);
     smelters[1]->dropOre();
     smelters[1]->dropOre();
-
+*/
     //// Wait for threads to exit
     for (int i = 0; i < Nm; i++) {
         pthread_join(miners[i]->getThreadId(), nullptr);

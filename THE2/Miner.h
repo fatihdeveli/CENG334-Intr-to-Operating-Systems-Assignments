@@ -30,6 +30,7 @@ public:
     unsigned int getId() const;
     unsigned int getCapacity() const;
     OreType getOreType() const;
+    unsigned int getReservedOreCount() const;
 
     pthread_mutex_t oreCountMutex; // Mutex for the ore count
     void reserveOre();
@@ -45,11 +46,6 @@ private:
     bool active;
     sem_t storageSlots; // Semaphore for the empty slots in the storage
     unsigned int reservedOreCount;
-public:
-    unsigned int getReservedOreCount() const;
-
-private:
-
     void writeMinerOutput(Action action);
 };
 

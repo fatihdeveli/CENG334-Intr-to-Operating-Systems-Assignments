@@ -20,7 +20,7 @@ Smelter::Smelter(unsigned int id, unsigned int interval, unsigned int capacity, 
     oreType(oreType),
     threadId(-1),
     producedIngotCount(0),
-    isActive(false),
+    active(false),
     waitingOreCount(0),
     waitingOreCountMutex(PTHREAD_MUTEX_INITIALIZER) {
 
@@ -35,7 +35,7 @@ void *Smelter::smelter(void *args) {
 
     auto *smelter = (Smelter *) args;
     smelter->threadId = pthread_self();
-    smelter->isActive = true;
+    smelter->active = true;
 
     // Fill smelter info - created
     SmelterInfo smelterInfo = { smelter->id, smelter->oreType, smelter->capacity,
@@ -96,7 +96,7 @@ void *Smelter::smelter(void *args) {
         WriteOutput(nullptr, nullptr, &smelterInfo, nullptr, SMELTER_FINISHED);
     }
 
-    smelter->isActive = false; // Smelter stopped
+    smelter->active = false; // Smelter stopped
 
     // Update smelter info
     FillSmelterInfo(&smelterInfo, smelter->id, smelter->oreType, smelter->capacity,
@@ -108,26 +108,52 @@ void *Smelter::smelter(void *args) {
     pthread_exit(nullptr);
 }
 
-pthread_t Smelter::getThreadId() const {
-    return threadId;
-}
+
 
 void Smelter::dropOre() {
     /* This function is called by transporters when they provide an ore to the smelter.
-     * Function increments waitingOreCount, if waitingOreCount >= 2, signals the condition variable
-     * twoOresReadyCV for the sleeping smelter thread to wake up.
-     * */
+     * Function increments waitingOreCount */
     pthread_mutex_lock(&waitingOreCountMutex);
-    if (++waitingOreCount >= 2) {
+    waitingOreCount++;
+    pthread_mutex_unlock(&waitingOreCountMutex);
+}
+
+void Smelter::signalDropOre() {
+    /* This function is called by transporters when they provide an ore to the smelter.
+     * If waitingOreCount >= 2, signals the condition variable twoOresReadyCV for the 
+     * sleeping smelter thread to wake up. */
+    pthread_mutex_lock(&waitingOreCountMutex);
+    if (waitingOreCount >= 2) {
         pthread_cond_signal(&twoOresReadyCV);
     }
     pthread_mutex_unlock(&waitingOreCountMutex);
+}
+
+
+unsigned int Smelter::getId() const{
+    return id;
 }
 
 unsigned int Smelter::getWaitingOreCount() const {
     return waitingOreCount;
 }
 
+unsigned int Smelter::getCapacity() const {
+    return capacity;
+}
+
+unsigned int Smelter::getProducedIngotCount() const {
+    return producedIngotCount;
+}
+
 OreType Smelter::getOreType() const {
     return oreType;
+}
+
+pthread_t Smelter::getThreadId() const {
+    return threadId;
+}
+
+bool Smelter::isActive() const {
+    return active;
 }

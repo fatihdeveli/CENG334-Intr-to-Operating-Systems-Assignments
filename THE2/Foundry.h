@@ -14,10 +14,26 @@ extern "C" {
 #define TIMEOUT 5
 
 class Foundry {
+public:
+    Foundry(unsigned int id, unsigned int interval, unsigned int capacity);
+
+    static void *foundry(void *args);
+    void dropOre(OreType &oreType);
+    void signalDropOre();
+
+    unsigned int getId() const;
+    unsigned int getCapacity() const;
+    unsigned int getProducedIngotCount() const;
+    unsigned int getWaitingIronCount() const;
+    unsigned int getWaitingCoalCount() const;
+    pthread_t getThreadId() const;
+    bool isActive() const;
+
+
 private:
     unsigned int id, interval, capacity, producedIngotCount, waitingIronCount, waitingCoalCount;
     pthread_t threadId;
-    bool isActive;
+    bool active;
 
     pthread_cond_t ironAndCoalReadyCV; // Condition variable
 
@@ -25,13 +41,6 @@ private:
     // from being modified by multiple threads at the same time.
 
 
-public:
-    pthread_t getThreadId() const;
-    Foundry(unsigned int id, unsigned int interval, unsigned int capacity);
-    static void *foundry(void *args);
-    void dropOre(OreType oreType);
-    unsigned int getWaitingIronCount();
-    unsigned int getWaitingCoalCount();
 };
 
 

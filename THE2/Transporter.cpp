@@ -5,9 +5,7 @@
 #include <iostream>
 #include <zconf.h>
 #include "Transporter.h"
-#include "Miner.h"
-#include "Smelter.h"
-#include "Foundry.h"
+
 
 
 // Transporter needs to check if miners are active and if they have ores in their storage.
@@ -24,10 +22,9 @@ extern sem_t producerSpacesForCoal;
 extern sem_t producerSpacesForIron;
 
 Transporter::Transporter(unsigned int id, unsigned int time) :
-    id(id), time(time), threadId(-1), carry(-1) {
+    id(id), time(time), threadId(-1), carry(IRON) {
 
     pthread_create(&threadId, nullptr, transporter, this);
-
 }
 
 void *Transporter::transporter(void *args) {
@@ -61,59 +58,83 @@ void *Transporter::transporter(void *args) {
             minerIndex = (minerIndex+1) % miners.size();
         }
 
-
+        std::cout << "transporter deciding " << std::endl;
+        // Decide which producer to drop the carry.
         switch (transporter->carry) {
-            case COPPER: // Goes to smelters
+            case COPPER: // Copper always goes to smelters
                 sem_wait(&producerSpacesForCopper);
                 // Producers waiting for the second ore have priority over producers without ores.
                 for (Smelter* s : smelters) { // Look for smelters waiting for the second ore.
-                    if (s->getOreType() == COPPER && s->getWaitingOreCount() == 1) {
+                    if (s->isActive() && s->getOreType() == COPPER && s->getWaitingOreCount() == 1) {
                         // Smelter routine
                         goto outOfSwitch;
                     }
                 }
                 for (Smelter* s : smelters) { // Look for smelters without any ores
-                    if (s->getOreType() == COPPER && s->getWaitingOreCount() == 0) {
+                    if (s->isActive() && s->getOreType() == COPPER && s->getWaitingOreCount() == 0) {
                         // Smelter routine
                         goto outOfSwitch;
                     }
                 }
                 break;
-            case COAL: // Goes to foundries
+            case COAL: // Coal always goes to foundries
                 sem_wait(&producerSpacesForCoal);
                 // Producers waiting for the second ore have priority over producers without ores.
                 for (Foundry* f : foundries) { // Look for foundries waiting for the second ore.
                     // TODO: consider using lock here
-                    if (f->getWaitingIronCount() == 1 && f->getWaitingCoalCount() == 0) {
+                    if (f->isActive() && f->getWaitingIronCount() == 1 && f->getWaitingCoalCount() == 0) {
                         // Foundry routine
                         goto outOfSwitch;
                     }
                 }
                 for (Foundry* f : foundries) { // Look for foundries without ores.
                     // TODO: consider using lock here
-                    if (f->getWaitingIronCount() == 0 && f->getWaitingCoalCount() == 0) {
+                    if (f->isActive() && f->getWaitingIronCount() == 0 && f->getWaitingCoalCount() == 0) {
                         // Foundry routine
                         goto outOfSwitch;
                     }
                 }
                 break;
-            case IRON: // Goes to either a smelter or a foundry
+            case IRON: // Iron goes to either a smelter or a foundry
                 sem_wait(&producerSpacesForIron);
                 // TODO: consider using lock here
-                // Look for foundries or smelters that already have 1 ore.
+                // Look for a smelter that already has 1 ore.
+                for (Smelter* s : smelters) {
+                    if (s->isActive() && s->getOreType() == IRON && s->getWaitingOreCount() == 1) {
+                        // Smelter routine
+                        goto outOfSwitch;
+                    }
+                }
+                // Look for a foundry that already has 1 coal ore.
+                for (Foundry* f : foundries) {
+                    if (f->isActive() && f->getWaitingIronCount() == 0 && f->getWaitingCoalCount() == 1) {
+                        // Smelter routine
+                        goto outOfSwitch;
+                    }
+                }
 
                 // Look for foundries or smelters without ores.
+                // Look for a smelter without any ore.
+                for (Smelter* s : smelters) {
+                    if (s->isActive() && s->getOreType() == IRON && s->getWaitingOreCount() == 0) {
+                        // Smelter routine
+                        goto outOfSwitch;
+                    }
+                }
+                // Look for a foundry without any ore.
+                for (Foundry* f : foundries) { // Look for foundries without ores.
+                    // TODO: consider using lock here
+                    if (f->isActive() && f->getWaitingIronCount() == 0 && f->getWaitingCoalCount() == 0) {
+                        // Foundry routine
+                        goto outOfSwitch;
+                    }
+                }
 
                 break;
 
         }
         outOfSwitch:
         ;
-
-
-        
-
-
 
 
     }
@@ -136,8 +157,7 @@ pthread_t Transporter::getThreadId() const {
 }
 
 void Transporter::writeTransporterOutput(Action action) {
-    OreType oreType = intToOre(carry);
-    TransporterInfo transporterInfo = {id, &oreType};
+    TransporterInfo transporterInfo = {id, &carry};
     WriteOutput(nullptr, &transporterInfo, nullptr, nullptr, action);
 }
 
@@ -162,7 +182,7 @@ bool Transporter::minerWithOresExist(std::vector<Miner *> &minerList) {
 void Transporter::minerRoutine(Miner *miner) {
     // Notification: Transporter travel
     MinerInfo minerInfo = {id, intToOre(0), 0, 0};
-    TransporterInfo transporterInfo;
+    TransporterInfo transporterInfo = {0, 0};
     WriteOutput(&minerInfo, &transporterInfo, nullptr, nullptr, TRANSPORTER_TRAVEL);
 
     // Sleep a value in range of Interval ± (Interval×0.01) microseconds for travel
@@ -173,12 +193,67 @@ void Transporter::minerRoutine(Miner *miner) {
     // Notification: Transporter takes ore
     FillMinerInfo(&minerInfo, miner->getId(), miner->getOreType(), miner->getCapacity(),
             miner->getCurrentOreCount());
-    OreType carryType = intToOre(carry);
-    FillTransporterInfo(&transporterInfo, id, &carryType);
+    FillTransporterInfo(&transporterInfo, id, &carry);
     WriteOutput(&minerInfo, &transporterInfo, nullptr, nullptr, TRANSPORTER_TAKE_ORE);
 
     // Sleep a value in range of Interval ± (Interval×0.01) microseconds for loading
     usleep(time - (time*0.01) + (rand()%(int)(time*0.02)));
 
     miner->signalStorageSpace();  // A new slot in the storage is available.
+}
+
+void Transporter::smelterRoutine(Smelter *smelter) {
+    SmelterInfo smelterInfo;
+    TransporterInfo transporterInfo;
+
+    // Notification: transporter is traveling.
+    FillSmelterInfo(&smelterInfo, smelter->getId(), intToOre(0), 0, 0, 0);
+    FillTransporterInfo(&transporterInfo, 0, &carry);
+    WriteOutput(nullptr, &transporterInfo, &smelterInfo, nullptr, TRANSPORTER_TRAVEL);
+
+    // Sleep a value in range of Interval ± (Interval×0.01) microseconds for travel
+    usleep(time - (time*0.01) + (rand()%(int)(time*0.02)));
+
+    smelter->dropOre();
+
+    // Notification: transporter dropped the ore
+    FillSmelterInfo(&smelterInfo, smelter->getId(), smelter->getOreType(), smelter->getCapacity(),
+        smelter->getWaitingOreCount(), smelter->getProducedIngotCount());
+    FillTransporterInfo(&transporterInfo, id, &carry);
+    WriteOutput(nullptr, &transporterInfo, &smelterInfo, nullptr, TRANSPORTER_DROP_ORE);
+
+    // Sleep a value in range of Interval ± (Interval×0.01) microseconds for unloading
+    usleep(time - (time*0.01) + (rand()%(int)(time*0.02)));
+
+    smelter->signalDropOre();
+
+    std::cout << "transporter dropped to smelter" << std::endl;
+}
+
+void Transporter::foundryRoutine(Foundry *foundry) {
+    FoundryInfo foundryInfo;
+    TransporterInfo transporterInfo;
+
+    // Notification: transporter is traveling.
+    FillFoundryInfo(&foundryInfo, 0, 0, 0, 0, 0);
+    FillTransporterInfo(&transporterInfo, id, &carry);
+    WriteOutput(nullptr, &transporterInfo, nullptr, &foundryInfo, TRANSPORTER_TRAVEL);
+
+    // Sleep a value in range of Interval ± (Interval×0.01) microseconds for travel
+    usleep(time - (time*0.01) + (rand()%(int)(time*0.02)));
+
+    foundry->dropOre(carry);
+
+    // Notification: transporter dropped the ore
+    FillFoundryInfo(&foundryInfo, foundry->getId(), foundry->getCapacity(),
+        foundry->getWaitingCoalCount(), foundry->getWaitingCoalCount(),
+        foundry->getProducedIngotCount());
+    FillTransporterInfo(&transporterInfo, id, &carry);
+    WriteOutput(nullptr, &transporterInfo, nullptr, &foundryInfo, TRANSPORTER_DROP_ORE);
+
+    // Sleep a value in range of Interval ± (Interval×0.01) microseconds for unloading
+    usleep(time - (time*0.01) + (rand()%(int)(time*0.02)));
+
+    foundry->signalDropOre();
+    std::cout << "transporter dropped to foundry" << std::endl;
 }

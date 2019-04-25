@@ -17,7 +17,7 @@ Foundry::Foundry(unsigned int id, unsigned int interval, unsigned int capacity) 
     producedIngotCount(0),
     waitingIronCount(0),
     waitingCoalCount(0),
-    isActive(false),
+    active(false),
     ironAndCoalCountMutex(PTHREAD_MUTEX_INITIALIZER){
 
     pthread_cond_init(&ironAndCoalReadyCV, nullptr);
@@ -29,7 +29,7 @@ Foundry::Foundry(unsigned int id, unsigned int interval, unsigned int capacity) 
 void *Foundry::foundry(void *args) {
     auto *foundry = (Foundry *) args;
     foundry->threadId = pthread_self();
-    foundry->isActive = true;
+    foundry->active = true;
 
     // Notification: foundry created
     FoundryInfo foundryInfo;
@@ -82,7 +82,7 @@ void *Foundry::foundry(void *args) {
 
     }
 
-    foundry->isActive = false; // Smelter stopped
+    foundry->active = false; // Foundry stopped
 
     // Notification: foundry stopped
     FillFoundryInfo(&foundryInfo, foundry->id, foundry->capacity, foundry->waitingIronCount,
@@ -92,34 +92,49 @@ void *Foundry::foundry(void *args) {
     pthread_exit(nullptr);
 }
 
-pthread_t Foundry::getThreadId() const {
-    return threadId;
-}
-
-void Foundry::dropOre(OreType oreType) {
+void Foundry::dropOre(OreType &oreType) {
     /* This function is called by transporters when they provide an ore to the foundry.
-     * Function increments waitingCoalCount or waitingIronCount, based on the incoming ore type.
-     * If waitingCoalCount >= 1 AND waitingIronCount >= 1, signals the condition variable
-     * ironAndCoalReadyCV for the sleeping foundry thread to wake up.
-     * */
+     * Function increments waitingCoalCount or waitingIronCount, based on the incoming 
+     * ore type. */
     pthread_mutex_lock(&ironAndCoalCountMutex);
     if (oreType == IRON) {
-        if (++waitingIronCount >= 1 && waitingCoalCount >= 1) {
-            pthread_cond_signal(&ironAndCoalReadyCV);
-        }
+        waitingIronCount++;
     }
     else if (oreType == COAL) {
-        if (waitingIronCount >= 1 && ++waitingCoalCount >= 1) {
-            pthread_cond_signal(&ironAndCoalReadyCV);
-        }
+        waitingCoalCount++;
     }
     pthread_mutex_unlock(&ironAndCoalCountMutex);
 }
 
-unsigned int Foundry::getWaitingIronCount() {
-    return waitingIronCount;
+void Foundry::signalDropOre() {
+    /* This function is called by transporters after they provided an ore to the foundry.
+     * If waitingCoalCount >= 1 AND waitingIronCount >= 1, signals the condition variable
+     * ironAndCoalReadyCV for the sleeping foundry thread to wake up. */
+    pthread_mutex_lock(&ironAndCoalCountMutex);
+    if (waitingIronCount >= 1 && waitingCoalCount >= 1) {
+        pthread_cond_signal(&ironAndCoalReadyCV);
+    }
+    pthread_mutex_unlock(&ironAndCoalCountMutex);
 }
 
-unsigned int Foundry::getWaitingCoalCount() {
+unsigned int Foundry::getId() const {
+    return id;
+}
+unsigned int Foundry::getCapacity() const {
+    return capacity;
+}
+unsigned int Foundry::getProducedIngotCount() const {
+    return producedIngotCount;
+}
+unsigned int Foundry::getWaitingIronCount() const {
+    return waitingIronCount;
+}
+unsigned int Foundry::getWaitingCoalCount() const {
     return waitingCoalCount;
+}
+pthread_t Foundry::getThreadId() const {
+    return threadId;
+}
+bool Foundry::isActive() const {
+    return active;
 }

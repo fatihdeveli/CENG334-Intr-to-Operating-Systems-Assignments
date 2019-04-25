@@ -7,6 +7,8 @@
 
 #include <vector>
 #include "Miner.h"
+#include "Smelter.h"
+#include "Foundry.h"
 
 extern "C" {
 #include "writeOutput.h"
@@ -15,12 +17,16 @@ extern "C" {
 
 class Transporter {
 private:
-    unsigned int id, time, carry;
+    unsigned int id, time;
+    OreType carry;
     pthread_t threadId;
     void writeTransporterOutput(Action action);
     void minerRoutine(Miner * miner);
+    void smelterRoutine(Smelter *smelter);
+    void foundryRoutine(Foundry *foundry);
 
 public:
+    Transporter(unsigned int id, unsigned int time);
     pthread_t getThreadId() const;
 
     // Check if there is at least one miner
@@ -28,9 +34,7 @@ public:
 
     // Check if there are ores in the storage of the miners
     static bool minerWithOresExist(std::vector<Miner *> &miners);
-
-public:
-    Transporter(unsigned int id, unsigned int time);
+    
 
     static void *transporter(void *args);
 
