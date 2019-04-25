@@ -133,7 +133,7 @@ fabric.properties
 ###
 .idea/
 CMakeLists.txt
-vscode/
+.vscode/
 
 ## THE1
 the1.tar.gz
@@ -143,5 +143,5 @@ mapreduce
 ## THE2
 source.zip
 #Executable
-simulator 
+output 
 

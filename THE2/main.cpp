@@ -18,15 +18,21 @@ std::vector<Foundry *> foundries; // List of pointers to foundries
 sem_t producedOres; // Signaled whenever a miner produces an ore.
 // Transporters call wait before they pick up an ore.
 
-sem_t producerSpaces; // Signaled whenever a producer finishes production of an
-// ingot and releases storage space. Transporters call wait before they drop an
-// ore to a producer.
+
+// Signaled whenever a producer finishes production of an ingot and releases
+// storage space. Transporters call wait before they drop an ore to a producer.
+sem_t producerSpacesForCopper;
+sem_t producerSpacesForCoal;
+sem_t producerSpacesForIron; 
 
 int main() {
     InitWriteOutput();
 
     sem_init(&producedOres, 0, 0);
-    sem_init(&producerSpaces, 0, 0);
+    sem_init(&producerSpacesForCopper, 0, 0);
+    sem_init(&producerSpacesForCoal, 0, 0);
+    sem_init(&producerSpacesForIron, 0, 0);
+    
 
     //// Create miner threads
     int Nm; // Number of miners
@@ -75,9 +81,17 @@ int main() {
         auto *smelter = new Smelter(id, interval, capacity, oreType);
         smelters.push_back(smelter);
 
-        // Each smelter provides 2 storage spaces to drop ores
-        sem_post(&producerSpaces);
-        sem_post(&producerSpaces);
+        // Each smelter of type COPPER provides 2 storage spaces to drop copper ores
+        if (oreType == COPPER) {
+            sem_post(&producerSpacesForCopper);
+            sem_post(&producerSpacesForCopper);
+        } 
+        // Each smelter of type IRON provides 2 storage spaces to drop iron ores
+        else if (oreType == IRON) {
+            sem_post(&producerSpacesForIron);
+            sem_post(&producerSpacesForIron);
+        }
+
     }
 
     //// Create foundry threads
@@ -95,9 +109,10 @@ int main() {
         auto *foundry = new Foundry(id, interval, capacity);
         foundries.push_back(foundry);
 
-        // Each foundry provides 2 storage spaces to drop ores
-        sem_post(&producerSpaces);
-        sem_post(&producerSpaces);
+        // Each foundry provides 1 storage space to drop iron ores and 1 storage space
+        // to drop coal ores.
+        sem_post(&producerSpacesForCoal);
+        sem_post(&producerSpacesForIron);
     }
 
     sleep(2);

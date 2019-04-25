@@ -6,6 +6,9 @@
 #include <zconf.h>
 #include "Foundry.h"
 
+extern sem_t producerSpacesForCoal;
+extern sem_t producerSpacesForIron;
+
 Foundry::Foundry(unsigned int id, unsigned int interval, unsigned int capacity) :
     id(id),
     interval(interval),
@@ -18,9 +21,6 @@ Foundry::Foundry(unsigned int id, unsigned int interval, unsigned int capacity) 
     ironAndCoalCountMutex(PTHREAD_MUTEX_INITIALIZER){
 
     pthread_cond_init(&ironAndCoalReadyCV, nullptr);
-
-    sem_init(&ironStorageSlots, 0, capacity);
-    sem_init(&coalStorageSlots, 0, capacity);
 
     pthread_create(&threadId, nullptr, foundry, this);
 
@@ -72,8 +72,8 @@ void *Foundry::foundry(void *args) {
         // FoundryProduced()
         // Signal ironStorageSlots and coalStorageSlots to let transporter threads know about the
         // availability for incoming ores.
-        sem_post(&foundry->ironStorageSlots);
-        sem_post(&foundry->coalStorageSlots);
+        sem_post(&producerSpacesForCoal);
+        sem_post(&producerSpacesForIron);
 
         // Notification: foundry finished
         FillFoundryInfo(&foundryInfo, foundry->id, foundry->capacity, foundry->waitingIronCount,
@@ -114,4 +114,12 @@ void Foundry::dropOre(OreType oreType) {
         }
     }
     pthread_mutex_unlock(&ironAndCoalCountMutex);
+}
+
+unsigned int Foundry::getWaitingIronCount() {
+    return waitingIronCount;
+}
+
+unsigned int Foundry::getWaitingCoalCount() {
+    return waitingCoalCount;
 }

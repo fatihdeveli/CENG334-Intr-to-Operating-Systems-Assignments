@@ -10,6 +10,9 @@
 
 #define TIMEOUT 5
 
+extern sem_t producerSpacesForCopper;
+extern sem_t producerSpacesForIron;
+
 Smelter::Smelter(unsigned int id, unsigned int interval, unsigned int capacity, OreType oreType) :
     id(id),
     interval(interval),
@@ -55,7 +58,6 @@ void *Smelter::smelter(void *args) {
             }
             // Woke up because received signal
         }
-
         // Either waitingOreCound > 2 or signal received while sleeping.
         // Two ores are ready, produce an ingot
         smelter->waitingOreCount -= 2;
@@ -73,11 +75,19 @@ void *Smelter::smelter(void *args) {
 
         smelter->producedIngotCount++;
 
-        // SmelterProduced()
-        // Signal storageSlots twice to let transporter threads know 2 slots are available for
-        // incoming ores.
-        sem_post(&smelter->storageSlots);
-        sem_post(&smelter->storageSlots);
+        // Smelter produced: Signal to let transporter threads know 2 slots are 
+        // available for incoming ores.
+        if (smelter->oreType == COPPER) {
+            sem_post(&producerSpacesForCopper);
+            sem_post(&producerSpacesForCopper);
+        }
+        else if (smelter->oreType == IRON) {
+            sem_post(&producerSpacesForIron);
+            sem_post(&producerSpacesForIron);
+        }
+
+        sem_post(&smelter->storageSlots); // TODO: delete field completely?
+        sem_post(&smelter->storageSlots); //
 
         // Update smelter info
         FillSmelterInfo(&smelterInfo, smelter->id, smelter->oreType, smelter->capacity,
@@ -85,7 +95,6 @@ void *Smelter::smelter(void *args) {
         // Notification: smelter finished
         WriteOutput(nullptr, nullptr, &smelterInfo, nullptr, SMELTER_FINISHED);
     }
-
 
     smelter->isActive = false; // Smelter stopped
 

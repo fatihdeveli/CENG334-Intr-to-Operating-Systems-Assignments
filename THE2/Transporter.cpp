@@ -19,7 +19,9 @@ extern std::vector<Foundry *> foundries;
 extern OreType intToOre(unsigned int oreType);
 
 extern sem_t producedOres;
-extern sem_t producerSpaces;
+extern sem_t producerSpacesForCopper;
+extern sem_t producerSpacesForCoal;
+extern sem_t producerSpacesForIron;
 
 Transporter::Transporter(unsigned int id, unsigned int time) :
     id(id), time(time), threadId(-1), carry(-1) {
@@ -61,7 +63,9 @@ void *Transporter::transporter(void *args) {
 
 
         switch (transporter->carry) {
-            case COPPER: // Check smelters for available storage space.
+            case COPPER: // Goes to smelters
+                sem_wait(&producerSpacesForCopper);
+                // Producers waiting for the second ore have priority over producers without ores.
                 for (Smelter* s : smelters) { // Look for smelters waiting for the second ore.
                     if (s->getOreType() == COPPER && s->getWaitingOreCount() == 1) {
                         // Smelter routine
@@ -69,21 +73,45 @@ void *Transporter::transporter(void *args) {
                     }
                 }
                 for (Smelter* s : smelters) { // Look for smelters without any ores
-
+                    if (s->getOreType() == COPPER && s->getWaitingOreCount() == 0) {
+                        // Smelter routine
+                        goto outOfSwitch;
+                    }
                 }
-
-
                 break;
-            case COAL:
+            case COAL: // Goes to foundries
+                sem_wait(&producerSpacesForCoal);
+                // Producers waiting for the second ore have priority over producers without ores.
+                for (Foundry* f : foundries) { // Look for foundries waiting for the second ore.
+                    // TODO: consider using lock here
+                    if (f->getWaitingIronCount() == 1 && f->getWaitingCoalCount() == 0) {
+                        // Foundry routine
+                        goto outOfSwitch;
+                    }
+                }
+                for (Foundry* f : foundries) { // Look for foundries without ores.
+                    // TODO: consider using lock here
+                    if (f->getWaitingIronCount() == 0 && f->getWaitingCoalCount() == 0) {
+                        // Foundry routine
+                        goto outOfSwitch;
+                    }
+                }
                 break;
-            case IRON:
+            case IRON: // Goes to either a smelter or a foundry
+                sem_wait(&producerSpacesForIron);
+                // TODO: consider using lock here
+                // Look for foundries or smelters that already have 1 ore.
+
+                // Look for foundries or smelters without ores.
+
                 break;
 
         }
         outOfSwitch:
+        ;
 
 
-        // Producers waiting for the second ore have priority over producer
+        
 
 
 
@@ -99,7 +127,6 @@ void *Transporter::transporter(void *args) {
     for (; semValue < 0; semValue++) {
         sem_post(&producedOres);
     }
-
 
     pthread_exit(nullptr);
 }
