@@ -69,7 +69,6 @@ int main() {
     //// Create smelter threads
     int Ns; // Number of smelters
     std::cin >> Ns;
-    std::vector<Smelter*> smelters;
     for (int i = 0; i < Ns; i++) {
         unsigned int id, interval, capacity, type;
         OreType oreType;
@@ -91,14 +90,11 @@ int main() {
             sem_post(&producerSpacesForIron);
             sem_post(&producerSpacesForIron);
         }
-
     }
 
     //// Create foundry threads
     int Nf; // Number of foundries
     std::cin >> Nf;
-
-    std::vector<Foundry*> foundries;
 
     for (int i = 0; i < Nf; i++) {
         unsigned int id, interval, capacity;
@@ -114,34 +110,31 @@ int main() {
         sem_post(&producerSpacesForCoal);
         sem_post(&producerSpacesForIron);
     }
-/*
-    sleep(2);
-    smelters[0]->dropOre();
-    smelters[0]->dropOre();
-    sleep(2);
-    smelters[1]->dropOre();
-    smelters[1]->dropOre();
-*/
+
     //// Wait for threads to exit
-    for (int i = 0; i < Nm; i++) {
+    for (int i = 0; i < Nm; i++)
         pthread_join(miners[i]->getThreadId(), nullptr);
-        delete miners[i];
-    }
-    for (int i = 0; i < Nt; i++) {
+    for (int i = 0; i < Nt; i++)
         pthread_join(transporters[i]->getThreadId(), nullptr);
-        delete transporters[i];
-    }
-    for (int i = 0; i < Ns; i++) {
+    for (int i = 0; i < Ns; i++)
         pthread_join(smelters[i]->getThreadId(), nullptr);
-        delete smelters[i];
-    }
-    for (int i = 0; i < Nf; i++) {
+    for (int i = 0; i < Nf; i++)
         pthread_join(foundries[i]->getThreadId(), nullptr);
+
+    for (int i = 0; i < Nm; i++)
+        delete miners[i];
+    for (int i = 0; i < Nt; i++)
+        delete transporters[i];
+    for (int i = 0; i < Ns; i++)
+        delete smelters[i];
+    for (int i = 0; i < Nf; i++)
         delete foundries[i];
-    }
+
 
     sem_destroy(&producedOres);
-    printf("Main thread exit\n");
+    sem_destroy(&producerSpacesForCopper);
+    sem_destroy(&producerSpacesForCoal);
+    sem_destroy(&producerSpacesForIron);
 
     return 0;
 }

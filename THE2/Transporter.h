@@ -34,6 +34,9 @@ public:
 
     // Check if there are ores in the storage of the miners
     static bool minerWithOresExist(std::vector<Miner *> &miners);
+
+    // Check if there are active producers
+    static bool activeProducerExist(const std::vector<Smelter *> &smelters, const std::vector<Foundry *> foundries);
     
 
     static void *transporter(void *args);

@@ -25,7 +25,6 @@ Smelter::Smelter(unsigned int id, unsigned int interval, unsigned int capacity, 
     waitingOreCountMutex(PTHREAD_MUTEX_INITIALIZER) {
 
     pthread_cond_init(&twoOresReadyCV, nullptr);
-    sem_init(&storageSlots, 0, capacity);
 
     pthread_create(&threadId, nullptr, smelter, this);
 }
@@ -37,15 +36,11 @@ void *Smelter::smelter(void *args) {
     smelter->threadId = pthread_self();
     smelter->active = true;
 
-    // Fill smelter info - created
-    SmelterInfo smelterInfo = { smelter->id, smelter->oreType, smelter->capacity,
-            smelter->waitingOreCount, smelter->producedIngotCount};
-    WriteOutput(nullptr, nullptr, &smelterInfo, nullptr, SMELTER_CREATED);
+    // Notification: smelter created
+    smelter->writeSmelterOutput(SMELTER_CREATED);
 
     while (true) {
-
-        // Quit if cannot produce ingots for a certain duration.
-        // WaitUntilTwoOres() // or timeout after 5 seconds
+        // Wait until two ores are dropped. Quit if cannot produce ingots for 5 seconds.
         pthread_mutex_lock(&smelter->waitingOreCountMutex);
         if (smelter->waitingOreCount < 2) {
             timespec time = {0, 0};
@@ -58,25 +53,20 @@ void *Smelter::smelter(void *args) {
             }
             // Woke up because received signal
         }
-        // Either waitingOreCound > 2 or signal received while sleeping.
+        // Either waitingOreCount > 2 or signal received while sleeping.
         // Two ores are ready, produce an ingot
         smelter->waitingOreCount -= 2;
         pthread_mutex_unlock(&smelter->waitingOreCountMutex);
 
-        // Update smelter info
-        FillSmelterInfo(&smelterInfo, smelter->id, smelter->oreType, smelter->capacity,
-                        smelter->waitingOreCount, smelter->producedIngotCount);
         // Notification: smelter started
-        WriteOutput(nullptr, nullptr, &smelterInfo, nullptr, SMELTER_STARTED);
-
+        smelter->writeSmelterOutput(SMELTER_STARTED);
 
         // Sleep a value in range of Interval +- (Interval*0.01) microseconds for production
         usleep(smelter->interval - (smelter->interval*0.01) + (rand()%(int)(smelter->interval*0.02)));
 
         smelter->producedIngotCount++;
 
-        // Smelter produced: Signal to let transporter threads know 2 slots are 
-        // available for incoming ores.
+        // Smelter produced: Signal to let transporter threads know 2 slots are available for incoming ores.
         if (smelter->oreType == COPPER) {
             sem_post(&producerSpacesForCopper);
             sem_post(&producerSpacesForCopper);
@@ -86,28 +76,22 @@ void *Smelter::smelter(void *args) {
             sem_post(&producerSpacesForIron);
         }
 
-        sem_post(&smelter->storageSlots); // TODO: delete field completely?
-        sem_post(&smelter->storageSlots); //
-
-        // Update smelter info
-        FillSmelterInfo(&smelterInfo, smelter->id, smelter->oreType, smelter->capacity,
-                        smelter->waitingOreCount, smelter->producedIngotCount);
         // Notification: smelter finished
-        WriteOutput(nullptr, nullptr, &smelterInfo, nullptr, SMELTER_FINISHED);
+        smelter->writeSmelterOutput(SMELTER_FINISHED);
     }
 
     smelter->active = false; // Smelter stopped
 
-    // Update smelter info
-    FillSmelterInfo(&smelterInfo, smelter->id, smelter->oreType, smelter->capacity,
-                    smelter->waitingOreCount, smelter->producedIngotCount);
     // Notification: Smelter stopped
-    WriteOutput(nullptr, nullptr, &smelterInfo, nullptr, SMELTER_STOPPED);
-
+    smelter->writeSmelterOutput(SMELTER_STOPPED);
 
     pthread_exit(nullptr);
 }
 
+void Smelter::writeSmelterOutput(Action action) {
+    SmelterInfo smelterInfo {id, oreType, capacity, waitingOreCount, producedIngotCount};
+    WriteOutput(nullptr, nullptr, &smelterInfo, nullptr, action);
+}
 
 
 void Smelter::dropOre() {

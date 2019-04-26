@@ -40,7 +40,7 @@ private:
     pthread_mutex_t ironAndCoalCountMutex; // Mutex to protect waitingIronCount and waitingCoalCount
     // from being modified by multiple threads at the same time.
 
-
+    void writeFoundryOutput(Action action);
 };
 
 

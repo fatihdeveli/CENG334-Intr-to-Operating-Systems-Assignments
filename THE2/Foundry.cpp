@@ -4,6 +4,7 @@
 
 #include <cstdlib>
 #include <zconf.h>
+#include <iostream>
 #include "Foundry.h"
 
 extern sem_t producerSpacesForCoal;
@@ -32,10 +33,7 @@ void *Foundry::foundry(void *args) {
     foundry->active = true;
 
     // Notification: foundry created
-    FoundryInfo foundryInfo;
-    FillFoundryInfo(&foundryInfo, foundry->id, foundry->capacity, foundry->waitingIronCount,
-            foundry->waitingCoalCount, foundry->producedIngotCount);
-    WriteOutput(nullptr, nullptr, nullptr, &foundryInfo, FOUNDRY_CREATED);
+    foundry->writeFoundryOutput(FOUNDRY_CREATED);
 
     while (true) {
         // Quit if cannot produce ingots for a certain duration.
@@ -52,7 +50,6 @@ void *Foundry::foundry(void *args) {
             }
             // Woke up because received signal
         }
-
         // Either ores are enough or received signal while sleeping.
         // Two ores are ready, produce an ingot
         foundry->waitingIronCount--;
@@ -60,9 +57,7 @@ void *Foundry::foundry(void *args) {
         pthread_mutex_unlock(&foundry->ironAndCoalCountMutex);
 
         // Notification: foundry started
-        FillFoundryInfo(&foundryInfo, foundry->id, foundry->capacity, foundry->waitingIronCount,
-                        foundry->waitingCoalCount, foundry->producedIngotCount);
-        WriteOutput(nullptr, nullptr, nullptr, &foundryInfo, FOUNDRY_STARTED);
+        foundry->writeFoundryOutput(FOUNDRY_STARTED);
 
         // Sleep a value in range of Interval +- (Interval*0.01) microseconds for production
         usleep(foundry->interval - (foundry->interval*0.01) + (rand()%(int)(foundry->interval*0.02)));
@@ -76,18 +71,14 @@ void *Foundry::foundry(void *args) {
         sem_post(&producerSpacesForIron);
 
         // Notification: foundry finished
-        FillFoundryInfo(&foundryInfo, foundry->id, foundry->capacity, foundry->waitingIronCount,
-                        foundry->waitingCoalCount, foundry->producedIngotCount);
-        WriteOutput(nullptr, nullptr, nullptr, &foundryInfo, FOUNDRY_FINISHED);
+        foundry->writeFoundryOutput(FOUNDRY_FINISHED);
 
     }
 
     foundry->active = false; // Foundry stopped
 
     // Notification: foundry stopped
-    FillFoundryInfo(&foundryInfo, foundry->id, foundry->capacity, foundry->waitingIronCount,
-                    foundry->waitingCoalCount, foundry->producedIngotCount);
-    WriteOutput(nullptr, nullptr, nullptr, &foundryInfo, FOUNDRY_STOPPED);
+    foundry->writeFoundryOutput(FOUNDRY_STOPPED);
 
     pthread_exit(nullptr);
 }
@@ -117,6 +108,11 @@ void Foundry::signalDropOre() {
     pthread_mutex_unlock(&ironAndCoalCountMutex);
 }
 
+void Foundry::writeFoundryOutput(Action action) {
+    FoundryInfo foundryInfo = {id, capacity, waitingIronCount, waitingCoalCount, producedIngotCount};
+    WriteOutput(nullptr, nullptr, nullptr, &foundryInfo, action);
+}
+
 unsigned int Foundry::getId() const {
     return id;
 }
@@ -138,3 +134,5 @@ pthread_t Foundry::getThreadId() const {
 bool Foundry::isActive() const {
     return active;
 }
+
+

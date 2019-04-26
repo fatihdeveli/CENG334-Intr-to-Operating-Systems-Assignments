@@ -18,10 +18,11 @@ Miner::Miner(unsigned int id, unsigned int interval, unsigned int capacity,
         threadId(-1),
         currentOreCount(0),
         reservedOreCount(0),
+        active(false),
         oreCountMutex(PTHREAD_MUTEX_INITIALIZER) {
 
     sem_init(&storageSlots, 0, capacity);
-    active = false;
+
     //
     pthread_create(&threadId, nullptr, miner, this);
 
@@ -38,15 +39,14 @@ void *Miner::miner(void *arg) {
     miner->active = true;
 
     // Notification: Miner created
-    MinerInfo minerInfo = {miner->id, miner->oreType, miner->capacity, miner->currentOreCount};
-    WriteOutput(&minerInfo, nullptr, nullptr, nullptr, MINER_CREATED);
+    miner->writeMinerOutput(MINER_CREATED);
 
     while (miner->totalOre) { // While there are remaining ore in the mine
         // Wait until a storage space is cleared by a transporter and reserve a storage
         // space for the next ore.
         sem_wait(&miner->storageSlots);
 
-        WriteOutput(&minerInfo, nullptr, nullptr, nullptr, MINER_STARTED);
+        miner->writeMinerOutput(MINER_STARTED);
 
         // Sleep a value in range of Interval +- (Interval*0.01) microseconds for production.
         usleep(miner->interval - (miner->interval*0.01) + (rand()%(int)(miner->interval*0.02)));
@@ -57,21 +57,20 @@ void *Miner::miner(void *arg) {
         pthread_mutex_unlock(&miner->oreCountMutex);
         sem_post(&producedOres);
 
+        if(--(miner->totalOre) == 0) // Miner will stop
+            miner->active = false;
+
         // Notification: Miner finished
-        minerInfo.current_count = miner->currentOreCount; // Update miner info
-        WriteOutput(&minerInfo, nullptr, nullptr, nullptr, MINER_FINISHED);
+        miner->writeMinerOutput(MINER_FINISHED);
 
         // Sleep a value in range of Interval +- (Interval*0.01) microseconds for the next round.
         usleep(miner->interval - (miner->interval*0.01) + (rand()%(int)(miner->interval*0.02)));
 
-        (miner->totalOre)--;
     } // Quit upon producing totalOre amount of ores.
 
-    // Miner stopped
-    miner->active = false;
-
     // Notification: Miner stopped
-    WriteOutput(&minerInfo, nullptr, nullptr, nullptr, MINER_STOPPED);
+    miner->writeMinerOutput(MINER_STOPPED);
+
     pthread_exit(nullptr);
 }
 

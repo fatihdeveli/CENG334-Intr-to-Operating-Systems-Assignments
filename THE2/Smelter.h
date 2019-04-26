@@ -37,13 +37,11 @@ private:
     pthread_t threadId;
     bool active;
 
-    sem_t storageSlots; // Semaphore that is signaled by smelter when there is an available
-    // slot in the storage for incoming ores. Transporters call wait to put ores in the storage.
-
     pthread_cond_t twoOresReadyCV; // Condition variable
 
     pthread_mutex_t waitingOreCountMutex; // Mutex to protect waitingOreCount from being
-    // modified by multiple threads at the same time. 
+    // modified by multiple threads at the same time.
+    void writeSmelterOutput(Action action);
 };
 
 #endif //THE2NEW_SMELTER_H

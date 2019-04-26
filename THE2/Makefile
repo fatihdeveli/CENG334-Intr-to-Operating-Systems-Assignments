@@ -1,4 +1,4 @@
-output: main.o Miner.o Transporter.o Smelter.o Foundry.o writeOutput.o
+all: main.o Miner.o Transporter.o Smelter.o Foundry.o writeOutput.o
 	g++ main.o Miner.o Transporter.o Smelter.o Foundry.o writeOutput.o -o output -pthread
 
 main.o: main.cpp
@@ -24,7 +24,7 @@ run:
 	./output
 test:
 	make
-	./output < input.txt
+	./output < test\ inputs/input.txt
 
 clean:
 	rm *.o output
