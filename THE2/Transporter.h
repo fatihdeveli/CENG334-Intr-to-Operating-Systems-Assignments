@@ -2,8 +2,8 @@
 // Created by fatih on 21.04.2019.
 //
 
-#ifndef THE2NEW_TRANSPORTER_H
-#define THE2NEW_TRANSPORTER_H
+#ifndef TRANSPORTER_H
+#define TRANSPORTER_H
 
 #include <vector>
 #include "Miner.h"
@@ -13,7 +13,6 @@
 extern "C" {
 #include "writeOutput.h"
 }
-
 
 class Transporter {
 private:
@@ -44,4 +43,4 @@ public:
 };
 
 
-#endif //THE2NEW_TRANSPORTER_H
+#endif //TRANSPORTER_H

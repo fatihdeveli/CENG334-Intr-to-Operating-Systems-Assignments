@@ -2,8 +2,8 @@
 // Created by fatih on 21.04.2019.
 //
 
-#ifndef THE2NEW_MINER_H
-#define THE2NEW_MINER_H
+#ifndef MINER_H
+#define MINER_H
 
 #include <semaphore.h>
 
@@ -49,5 +49,4 @@ private:
     void writeMinerOutput(Action action);
 };
 
-
-#endif //THE2NEW_MINER_H
+#endif //MINER_H

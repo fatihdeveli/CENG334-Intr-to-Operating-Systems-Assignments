@@ -2,8 +2,8 @@
 // Created by fatih on 21.04.2019.
 //
 
-#ifndef THE2NEW_SMELTER_H
-#define THE2NEW_SMELTER_H
+#ifndef SMELTER_H
+#define SMELTER_H
 
 extern "C" {
 #include "writeOutput.h"
@@ -14,7 +14,7 @@ class Smelter {
 public:
     Smelter(unsigned int id, unsigned int interval, unsigned int capacity, OreType oreType);
     
-    static void *smelter(void* args);
+    static void *smelter(void* args); // Smelter thread routine
 
     // Called by transporters: Increments waitingOreCount (safely with lock)
     void dropOre();
@@ -44,4 +44,4 @@ private:
     void writeSmelterOutput(Action action);
 };
 
-#endif //THE2NEW_SMELTER_H
+#endif //SMELTER_H

@@ -22,8 +22,9 @@ extern sem_t producerSpacesForCoal;
 extern sem_t producerSpacesForIron;
 
 Transporter::Transporter(unsigned int id, unsigned int time) :
-    id(id), time(time), threadId(-1), carry(IRON) {
-
+    id(id), time(time), threadId(-1),
+    carry(IRON) // Initial ore type is not used.
+{
     pthread_create(&threadId, nullptr, transporter, this);
 }
 
@@ -37,15 +38,12 @@ void *Transporter::transporter(void *args) {
 
     transporter->writeTransporterOutput(TRANSPORTER_CREATED);
 
-
     while (activeMinerExists(miners) || minerWithOresExist(miners)) {
 
-        // Carried ore type is initially -1.
+        sem_wait(&producedOres); // Wait for a miner to produce an ore.
 
         // Find the next miner with available ores in the storage. Iterate no more than maximum miners.size()
         // times since another thread may have taken the last ore in a storage since last check.
-
-        sem_wait(&producedOres);
 
         bool pickedUpOre = false;
         for (int i = 0; i < miners.size(); i++) {
@@ -63,8 +61,7 @@ void *Transporter::transporter(void *args) {
             pthread_mutex_unlock(&miners[minerIndex]->oreCountMutex);
             minerIndex = (minerIndex+1) % miners.size();
         }
-        if (!pickedUpOre) continue;
-
+        if (!pickedUpOre) continue; // Another thread may have taken the only ore.
 
         // Decide which producer to drop the carry.
         switch (transporter->carry) {
@@ -84,6 +81,7 @@ void *Transporter::transporter(void *args) {
                     }
                 }
                 break;
+
             case COAL: // Coal always goes to foundries
                 sem_wait(&producerSpacesForCoal);
                 // Producers waiting for the second ore have priority over producers without ores.
@@ -102,6 +100,7 @@ void *Transporter::transporter(void *args) {
                     }
                 }
                 break;
+
             case IRON: // Iron goes to either a smelter or a foundry
                 sem_wait(&producerSpacesForIron);
                 // TODO: consider using lock here
@@ -153,25 +152,22 @@ void *Transporter::transporter(void *args) {
         sem_post(&producedOres);
     }
 
-    /* If producers have stopped, check if other transporter threads are waiting fo producers.
-     * Wake up other transporter threads if they are waiting. */
+    /* If producers have stopped, check if other transporter threads are waiting for
+     * producers. Wake up other transporter threads if they are waiting. */
     sem_getvalue(&producerSpacesForIron, &semValue);
-    std::cout << "waking up " << -1*semValue << " iron threads." << std::endl;
     for (; semValue <= 0; semValue++) {
         sem_post(&producerSpacesForIron);
     }
     sem_getvalue(&producerSpacesForCopper, &semValue);
-    std::cout << "waking up " << -1*semValue << " copper threads." << std::endl;
     for (; semValue <= 0; semValue++) {
         sem_post(&producerSpacesForCopper);
     }
     sem_getvalue(&producerSpacesForCoal, &semValue);
-    std::cout << "waking up " << -1*semValue << " coal threads." << std::endl;
     for (; semValue <= 0; semValue++) {
         sem_post(&producerSpacesForCoal);
     }
 
-
+    // Notification: transporter stopped.
     transporter->writeTransporterOutput(TRANSPORTER_STOPPED);
 
     pthread_exit(nullptr);
@@ -252,8 +248,6 @@ void Transporter::smelterRoutine(Smelter *smelter) {
     usleep(time - (time*0.01) + (rand()%(int)(time*0.02)));
 
     smelter->signalDropOre();
-
-    std::cout << "transporter dropped to smelter" << std::endl;
 }
 
 void Transporter::foundryRoutine(Foundry *foundry) {
@@ -281,7 +275,6 @@ void Transporter::foundryRoutine(Foundry *foundry) {
     usleep(time - (time*0.01) + (rand()%(int)(time*0.02)));
 
     foundry->signalDropOre();
-    std::cout << "transporter dropped to foundry" << std::endl;
 }
 
 bool Transporter::activeProducerExist(const std::vector<Smelter *> &smtList, const std::vector<Foundry *> fndList) {
