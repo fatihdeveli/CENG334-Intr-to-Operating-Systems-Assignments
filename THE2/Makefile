@@ -1,5 +1,5 @@
 all: main.o Miner.o Transporter.o Smelter.o Foundry.o writeOutput.o
-	g++ main.o Miner.o Transporter.o Smelter.o Foundry.o writeOutput.o -o output -pthread
+	g++ main.o Miner.o Transporter.o Smelter.o Foundry.o writeOutput.o -o simulator -pthread
 
 main.o: main.cpp
 	g++ -c main.cpp
@@ -21,11 +21,11 @@ Foundry.o: Foundry.cpp Foundry.h
 
 run:
 	make
-	./output
+	./simulator
 test:
 	make
-	./output < test\ inputs/input.txt
+	./simulator < test\ inputs/input.txt
 
 clean:
-	rm *.o output
+	rm *.o simulator
 
