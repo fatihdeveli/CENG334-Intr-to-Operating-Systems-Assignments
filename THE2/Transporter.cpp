@@ -147,7 +147,6 @@ void *Transporter::transporter(void *args) {
     int semValue;
     sem_getvalue(&producedOres, &semValue);
 
-    std::cout << "waking up " << -1*semValue << " threads." << std::endl;
     for (; semValue <= 0; semValue++) {
         sem_post(&producedOres);
     }
